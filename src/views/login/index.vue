@@ -91,8 +91,6 @@ export default {
       console.log(1)
     },
     async onSubmit () {
-      const user = this.user
-
       this.$toast.loading({
         message: '加载中...',
         forbidClick: true,
@@ -100,8 +98,9 @@ export default {
       })
 
       try {
-        const res = await login(user)
-        this.$toast.success('登录成功', res)
+        const { data } = await login(this.user)
+        this.$store.commit('setUser', data.data)
+        this.$toast.success('登录成功')
       } catch (error) {
         if (error.response.status === 400) {
           this.$toast.fail('手机号或验证码错误')
