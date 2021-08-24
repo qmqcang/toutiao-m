@@ -27,7 +27,9 @@
         type="number"
         maxlength="6"
       >
-        <i slot="left-icon" class="toutiao toutiao-yanzhengma"></i>
+        <template #left-icon>
+          <i class="toutiao toutiao-yanzhengma"></i>
+        </template>
         <template #button>
           <!-- 倒计时 -->
           <van-count-down
@@ -88,7 +90,7 @@ export default {
   },
   methods: {
     onClickLeft () {
-      console.log(1)
+      this.$router.back()
     },
     async onSubmit () {
       this.$toast.loading({
@@ -101,6 +103,7 @@ export default {
         const { data } = await login(this.user)
         this.$store.commit('setUser', data.data)
         this.$toast.success('登录成功')
+        this.$router.back()
       } catch (error) {
         if (error.response.status === 400) {
           this.$toast.fail('手机号或验证码错误')
