@@ -8,6 +8,7 @@
           type="info"
           size="small"
           round
+          to="/search"
         >
           搜索
           <template #icon>
@@ -17,7 +18,7 @@
       </template>
     </van-nav-bar>
     <!-- 频道搜索 -->
-    <van-tabs class="channel-tabs" v-model="active" animated swipeable>
+    <van-tabs class="channel-tabs" v-model="active" animated swipeable border>
       <van-tab
         v-for="channel in channels"
         :key="channel.id"
@@ -47,7 +48,8 @@
       <!-- 频道组件 -->
       <channel-edit
        :my-channels="channels"
-       :active="active"
+       :active.sync="active"
+       :isChannelEditShow.sync="isChannelEditShow"
       />
     </van-popup>
   </div>
@@ -57,6 +59,8 @@
 import { getUserChannels } from '@/api/user'
 import ArticleList from '@/views/home/components/article-list.vue'
 import ChannelEdit from '@/views/home/components/channel-edit.vue'
+import { mapState } from 'vuex'
+import { getItem } from '@/utils/storage'
 
 export default {
   name: 'HomeIndex',
@@ -66,6 +70,9 @@ export default {
       channels: [],
       isChannelEditShow: false
     }
+  },
+  computed: {
+    ...mapState(['user'])
   },
   components: {
     ArticleList,
@@ -78,14 +85,30 @@ export default {
   },
   methods: {
     async loadChannels () {
-      await getUserChannels()
-        .then((result) => {
-          const { data: { data } } = result
-          this.channels = data.channels
-        }).catch((err) => {
-          console.log(err)
-          this.$toast('获取频道数据失败')
-        })
+      try {
+        let channels = []
+
+        // 登录状态
+        if (this.user) {
+          const { data: { data } } = await getUserChannels()
+          channels = data.channels
+        } else {
+          const localChannels = getItem('TOUTIAO_CHANNELS')
+
+          // 判断本地存储中是否含有数据
+          if (localChannels) {
+            channels = localChannels
+          } else {
+            // 请求默认频道数据
+            const { data: { data } } = await getUserChannels()
+            channels = data.channels
+          }
+        }
+
+        this.channels = channels
+      } catch (error) {
+        this.$toast('获取频道数据失败')
+      }
     }
   }
 }
@@ -119,7 +142,13 @@ export default {
       left: 0;
       right: 0;
       height: 82px;
+      overflow-x: auto;
       z-index: 1;
+
+      // 隐藏滚动条
+      &::-webkit-scrollbar {
+        display: none;
+      }
     }
 
     .van-tabs__nav--complete {
@@ -128,6 +157,7 @@ export default {
 
     .van-tab {
       min-width: 200px;
+      background-color: #fff;
       border-right: 1px solid #edeff3;
       font-size: 30px;
       color: #777;
