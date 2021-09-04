@@ -1,7 +1,7 @@
 <template>
   <div class="home-container">
     <!-- 顶部搜索 -->
-    <van-nav-bar class="page-nav-bar" fixed>
+    <van-nav-bar class="app-nav-bar" fixed>
       <template #title>
         <van-button
           class="search-btn"

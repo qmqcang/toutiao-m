@@ -6,36 +6,65 @@
       finished-text="没有更多了"
       @load="onLoad"
     >
-      <van-cell v-for="item in list" :key="item" :title="item" />
+      <van-cell
+        v-for="(article, index) in list"
+        :key="index"
+        :title="article.title"
+        :to="{
+          name: 'article',
+          params: {
+            articleId: article.art_id
+          }
+        }"
+      />
     </van-list>
   </div>
 </template>
 
 <script>
+import { getSearchResult } from '@/api/search'
+
 export default {
   name: 'SearchResult',
+  props: {
+    searchText: {
+      type: String,
+      required: true
+    }
+  },
   data () {
     return {
       list: [],
       loading: false,
-      finished: false
+      finished: false,
+      page: 1, // 页码
+      per_page: 10 // 每页返回条目
     }
   },
   methods: {
-    onLoad () {
-      setTimeout(() => {
-        for (let i = 0; i < 10; i++) {
-          this.list.push(this.list.length + 1)
-        }
+    async onLoad () {
+      try {
+        const { data: { data } } = await getSearchResult({
+          page: this.page,
+          per_page: this.per_page,
+          q: this.searchText // 关键字
+        })
 
-        // 加载状态结束
+        const { results } = data
+        this.list.push(...results)
+
+        // 关闭加载中
         this.loading = false
 
-        // 数据全部加载完成
-        if (this.list.length >= 40) {
-          this.finished = true
+        if (results.length) {
+          this.page++
+        } else {
+          // 关闭加载更多
+          this.finished = false
         }
-      }, 1000)
+      } catch (error) {
+        this.$toast('没有相关内容')
+      }
     }
   }
 }

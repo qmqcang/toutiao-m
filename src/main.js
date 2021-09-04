@@ -7,7 +7,7 @@ import Vant from 'vant'
 import 'vant/lib/index.css'
 
 // 全局样式文件
-// import './assets/reset.css'
+import './assets/reset.css'
 import './styles/index.less'
 
 // 动态设置REM基准值
