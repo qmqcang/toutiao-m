@@ -47,6 +47,12 @@
         ref="article-content"
         v-html="article.content"
       ></div>
+      <!-- 文章评论 -->
+      <comment-list
+        :source="articleId"
+        :list="commentList"
+        :total-comment-count.sync="totalCommentCount"
+      ></comment-list>
       <!-- 底部交互栏 -->
       <div class="article-bottom">
         <van-button
@@ -54,17 +60,18 @@
           type="default"
           round
           size="small"
+          @click="isPostShow = !isPostShow"
         >写评论</van-button>
         <van-icon
           name="comment-o"
-          info="999"
+          :badge="totalCommentCount"
           color="#777"
+          @click="scrollToComments"
         />
         <van-icon
           :name="article.is_collected ? 'star' : 'star-o'"
           :color="article.is_collected ? 'orange' : '#777'"
           @click="onCollect"
-          :loading="isCollectLoading"
         />
         <van-icon
           :name="article.attitude === 1 ? 'good-job' : 'good-job-o'"
@@ -73,15 +80,45 @@
         />
         <van-icon name="share" color="#777777"></van-icon>
       </div>
+      <!-- 评论发布 -->
+      <van-popup
+        class="popup"
+        v-model="isPostShow"
+        position="bottom"
+      >
+        <post-comment
+          :target="articleId"
+          :isPostShow.sync="isPostShow"
+          @post-success="onPostSucces"
+        ></post-comment>
+      </van-popup>
+      <!-- 评论回复 -->
+      <van-popup
+        class="popup"
+        v-model="isReplyShow"
+        position="bottom"
+        :style="{ height: '93.1%' }"
+        @close="setReplyShow([isReplyShow])"
+      >
+        <comment-reply
+          v-if="isReplyShow"
+          :comment="replyComment"
+          :article-id="articleId"
+        />
+      </van-popup>
     </div>
   </div>
 </template>
 
 <script>
 import '@/views/article/github-markdown.css'
+import CommentList from './components/comment-list'
+import PostComment from './components/post-comment'
+import CommentReply from './components/comment-reply'
 import { getArticleById, addCollect, deleteCollect, addLike, deleteLike } from '@/api/article'
 import { ImagePreview } from 'vant'
 import { addFollow, deleteFollow } from '@/api/user'
+import { mapState, mapMutations } from 'vuex'
 
 export default {
   name: 'ArticleIndex',
@@ -93,14 +130,29 @@ export default {
   },
   data () {
     return {
-      article: {},
-      isFollowLoading: false // 按钮加载中
+      article: {}, // 文章信息
+      isFollowLoading: false, // 按钮加载中
+      isPostShow: false, // 是否显示评论输入框
+      commentList: [], // 评论列表
+      totalCommentCount: 0, // 全部评论数
+      isReplyShow: false, // 是否显示评论回复弹出层
+      replyComment: {} // 当前点击回复的用户信息
     }
+  },
+  components: {
+    CommentList,
+    PostComment,
+    CommentReply
+  },
+  computed: {
+    ...mapState(['replyShow', 'comment'])
   },
   created () {
     this.loadArticle()
   },
   methods: {
+    ...mapMutations(['setReplyShow']),
+
     async loadArticle () {
       const { data: { data } } = await getArticleById(this.articleId)
       this.article = data
@@ -158,7 +210,7 @@ export default {
       }
 
       this.article.is_collected = !this.article.is_collected
-      this.$toast.success(`${this.article.is_collected ? '取消收藏' : '收藏成功'}`)
+      this.$toast.success(`${this.article.is_collected ? '收藏成功' : '取消收藏'}`)
     },
 
     async onLike () {
@@ -178,6 +230,28 @@ export default {
       }
 
       this.$toast.success(`${this.article.attitude !== 1 ? '取消点赞' : '点赞成功'}`)
+    },
+
+    onPostSucces (comment) {
+      this.commentList.unshift(comment)
+      this.totalCommentCount++
+      this.isPostShow = false
+    },
+
+    scrollToComments () {
+      this.$nextTick(() => {
+        document.querySelector('.comment-list').scrollIntoView()
+      })
+    }
+  },
+
+  watch: {
+    replyShow: {
+      handler () {
+        this.isReplyShow = this.replyShow
+        this.replyComment = this.comment
+      },
+      deep: true
     }
   }
 }
@@ -185,17 +259,13 @@ export default {
 
 <style lang="less" scoped>
 .article-container {
-  display: flex;
-  flex-direction: column;
-
   .article-main {
-    flex: 1;
-    position: absolute;
+    position: fixed;
     top: 92px;
     left: 0;
     right: 0;
     bottom: 88px;
-    overflow-x: hidden;
+    overflow: hidden auto;
 
     h1.title {
       padding: 25px 32px;
